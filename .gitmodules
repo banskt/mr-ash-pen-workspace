@@ -1,0 +1,6 @@
+[submodule "mr-ash-pen"]
+	path = mr-ash-pen
+	url = git@github.com:banskt/mr-ash-pen.git
+[submodule "notebooks/mr_ash_demo_pcarbo/mr-ash"]
+	path = notebooks/mr_ash_demo_pcarbo/mr-ash
+	url = git@github.com:pcarbo/mr-ash.git
