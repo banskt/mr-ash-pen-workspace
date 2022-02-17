@@ -239,10 +239,10 @@ def get_responses (X, b, sd):
     return np.dot(X, b) + sd * np.random.normal(size = X.shape[0])
 
 
-def changepoint (x, knots, std, 
+def changepoint_from_bspline (x, knots, std, 
                  degree = 0, signal = "gamma", seed = None,
                  include_intercept = False, bfix = None,
-                 eps = 1e-4):
+                 eps = 1e-4, get_bsplines = False):
     '''
     Generate trend-filtering data, using the following inputs.
         x: data points
@@ -288,7 +288,82 @@ def changepoint (x, knots, std,
     # (experimental)
     signal = np.mean(np.square(btrue[btrue != 0]))
     snr    = signal / np.square(std)
-    return H, y, ytest, btrue, snr
+    if get_bsplines:
+        return H, y, ytest, btrue, snr, bspline_bases, beta
+    else:
+        return H, y, ytest, btrue, snr
+
+
+## def changepoint(x, knots, std, degree = 0, signal = "gamma", seed = None,
+##                 include_intercept = False, bfix = None):
+##     if seed is not None: np.random.seed(seed)
+##     n      = x.shape[0]
+##     nknots = knots.shape[0]
+##     nbases = nknots + degree + int(include_intercept)
+##     H      = trendfiltering_basis_matrix(n, degree)
+##     b      = np.zeros(n)
+##     kp     = np.array([np.argmin(np.abs(x - k)) for k in knots])
+##     b[kp]  = sample_betas(nbases, method = signal, bfix = bfix)[:-knots]
+##     noise  = np.random.normal(0, std, size = n * 2)
+##     ytrue  = np.dot(H, b)
+##     y      = ytrue + noise[:n]
+##     ytest  = ytrue + noise[n:]
+##     signal = np.mean(np.square(b[b != 0]))
+##     snr    = signal / np.square(std)
+##     return H, y, ytest, b, snr
+
+
+
+def plot_data_from_bspline(axlist, x, y, knots, degree, G, Gb, H, Hb, include_intercept = False):
+    ax1 = axlist[0]
+    ax2 = axlist[1]
+    ax3 = axlist[2]
+    ax4 = axlist[3]
+
+    ax1.set_title("Contribution from B-Spline bases")
+    ax2.set_title("Contribution from Trendfiltering bases")
+
+    kpos = np.array([np.argmin(np.abs(x - k)) for k in knots])
+    Gbarr = np.zeros(x.shape[0])
+    Gbstr = list()
+    icount = 0
+    if include_intercept:
+        Gbstr.append("Intercept")
+        Gbarr[icount] = Gb[icount]
+        icount += 1
+    for i in range(degree):
+        Gbstr.append(f"Degree {i+1}")
+        Gbarr[icount] = Gb[icount]
+        icount += 1
+    for k in kpos:
+        Gbstr.append(f"Knot {k}")
+        Gbarr[k] = Gb[icount]
+        icount += 1
+
+    for i in range(G.shape[1]):
+        ax1.plot(x, Gb[i] * G[:, i], label = Gbstr[i])
+    ax1.legend(title = "Index")
+
+    for i,b in enumerate(Hb):
+        if b != 0:
+            ax2.plot(x, b * H[:, i], label = f"{i+1}")
+    ax2.legend(title = "Base index")
+    
+    
+    ax3.scatter(x, y)
+    ax3.plot(x, np.dot(H, Hb), label = "TF")
+
+    ax3.plot(x, np.dot(G, Gb), label = "B-Spline")
+    ax3.legend(frameon = True, borderpad = 1)
+    ax3.set_title("Generated curve")
+    ax3.set_ylabel("y")
+
+    ax4.scatter(x, Hb, label = "TF")
+    ax4.scatter(x, Gbarr, label = "B-Spline")
+    ax4.legend(frameon = True, borderpad = 1)
+    ax4.set_title("Coefficients")
+    ax4.set_ylabel("b")
+    return
 
 
 def hills_knots(n, kleft, kright, degree = 3):
@@ -305,7 +380,7 @@ def hills_tibshirani(n = 128, kleft = 2, kright = 4, std = 0.3,
                      seed = 100):
     x = np.linspace(0, n-1, n)
     knots = hills_knots(n, kleft, kright)
-    H, y, ytest, btrue, snr = changepoint(x, knots, std, degree = 3,
+    H, y, ytest, btrue, snr = changepoint_from_bspline(x, knots, std, degree = 3,
                                           signal = "fixed", bfix = btrue,
                                           seed = seed)
     return H, y, ytest, btrue, snr
