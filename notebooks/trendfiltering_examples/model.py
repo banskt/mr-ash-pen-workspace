@@ -314,7 +314,8 @@ def changepoint_from_bspline (x, knots, std,
 
 
 
-def plot_data_from_bspline(axlist, x, y, knots, degree, G, Gb, H, Hb, include_intercept = False):
+def plot_data_from_bspline(axlist, x, y, knots, degree, G, Gb, H, Hb, 
+                           include_intercept = False, show_base_legend = True):
     ax1 = axlist[0]
     ax2 = axlist[1]
     ax3 = axlist[2]
@@ -342,24 +343,25 @@ def plot_data_from_bspline(axlist, x, y, knots, degree, G, Gb, H, Hb, include_in
 
     for i in range(G.shape[1]):
         ax1.plot(x, Gb[i] * G[:, i], label = Gbstr[i])
-    ax1.legend(title = "Index")
+    if show_base_legend: ax1.legend(title = "Index")
 
     for i,b in enumerate(Hb):
         if b != 0:
             ax2.plot(x, b * H[:, i], label = f"{i+1}")
-    ax2.legend(title = "Base index")
+    if show_base_legend: axs.legend(title = "Base index")
     
     
-    ax3.scatter(x, y)
-    ax3.plot(x, np.dot(H, Hb), label = "TF")
+    ax3.scatter(x, y, s = 5, edgecolor = 'black', facecolor='white')
+    ax3.plot(x, np.dot(H, Hb), label = "TF basis")
 
     ax3.plot(x, np.dot(G, Gb), label = "B-Spline")
     ax3.legend(frameon = True, borderpad = 1)
     ax3.set_title("Generated curve")
     ax3.set_ylabel("y")
 
-    ax4.scatter(x, Hb, label = "TF")
-    ax4.scatter(x, Gbarr, label = "B-Spline")
+    ax4.scatter(x[Hb==0], Hb[Hb==0], s = 1, edgecolor = 'black', facecolor='white')
+    ax4.scatter(x[Hb!=0], Hb[Hb!=0], label = "TF basis")
+    ax4.scatter(x[Gbarr!=0], Gbarr[Gbarr!=0], label = "B-Spline")
     ax4.legend(frameon = True, borderpad = 1)
     ax4.set_title("Coefficients")
     ax4.set_ylabel("b")
