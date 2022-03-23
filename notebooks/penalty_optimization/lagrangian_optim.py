@@ -3,9 +3,6 @@ import collections
 from mrashpen.models.normal_means_ash_scaled import NormalMeansASHScaled
 from scipy import optimize as sp_optimize
 
-RES_FIELDS = ['theta', 'coef', 'prior', 'residual_var', 'intercept',
-              'elbo_path', 'obj_path', 'niter', 'plr1', 'plr2', 'plr3', 'plr4']
-
 MINV_FIELDS = ['x', 'xpath', 'objpath', 'success', 'message', 'niter', 'is_diverging']
 class MinvInfo(collections.namedtuple('_MinvInfo', MINV_FIELDS)):
     __slots__ = ()
