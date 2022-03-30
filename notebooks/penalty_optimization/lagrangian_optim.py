@@ -1,7 +1,9 @@
 import numpy as np
 import collections
 from mrashpen.models.normal_means_ash_scaled import NormalMeansASHScaled
+
 from scipy import optimize as sp_optimize
+from scipy import interpolate as sp_interpolate
 
 MINV_FIELDS = ['x', 'xpath', 'objpath', 'success', 'message', 'niter', 'is_diverging']
 class MinvInfo(collections.namedtuple('_MinvInfo', MINV_FIELDS)):
@@ -109,9 +111,47 @@ def Minverse_newton_raphson(b, std, wk, sk, dj, tol, maxiter, theta_init):
     return Minv
 
 
+def Minverse_fssi(b, std, wk, sk, dj, ngrid = 50, interpolate = 'linear'):
 
-def shrinkage_operator_inverse(b, std, wk, sk, dj, method = 'hybr', theta_init = None,
-                               tol = 1.48e-08, maxiter = 1000):
+    def create_spline(x, y, dydx):
+        n = x.shape[0]
+        c = np.empty((4, n-1), dtype = y.dtype)
+        xdiff = np.diff(x)
+        slope = (y[1:] - y[:-1]) / xdiff
+        t = (dydx[:-1] + dydx[1:] - 2 * slope) / xdiff
+        c[0] = t / xdiff
+        c[1] = (slope - dydx[:-1]) / xdiff - t
+        c[2] = dydx[:-1]
+        c[3] = y[:-1]
+        return sp_interpolate.PPoly(c, x)
+
+    babs = np.abs(b)
+    ymax = max(babs)
+    Minv = shrinkage_operator_inverse(np.array([ymax]), std, wk, sk, np.ones(1) * dj[0], method = 'hybr')
+    xmax = Minv.x[0]
+    xgrid = np.logspace(-4, np.log10(xmax), ngrid)
+    ygrid, xderiv, _, _ = shrinkage_operator(xgrid, std, wk, sk, np.ones(ngrid) * dj[0], jac = True)
+    dgrid = 1 / xderiv
+    #xposgrid = np.logspace(-4, np.log10(xmax), ngrid)
+    #print (f"Max values of b and M^{-1}(b) are {ymax}, {xmax}")
+    #yposgrid = shrink_theta(xposgrid, std, wk, sk, np.ones(ngrid))
+    #yposgrid, xderiv, _, _ = shrinkage_operator(xposgrid, std, wk, sk, np.ones(ngrid), jac = True)
+    #dposgrid = 1 / xderiv
+    #xgrid = np.concatenate((-xposgrid[::-1], xposgrid))
+    #ygrid = np.concatenate((-yposgrid[::-1], yposgrid))
+    #dgrid = np.concatenate((-dposgrid[::-1], dposgrid))
+    if interpolate == 'linear':
+        t_fssi = np.interp(babs, ygrid, xgrid)
+        t_fssi *= np.sign(b)
+    elif interpolate == 'cubic':
+        cs = create_spline(ygrid, xgrid, dgrid)
+        t_fssi = cs(babs)
+        t_fssi *= np.sign(b)
+    return t_fssi
+
+
+def shrinkage_operator_inverse(b, std, wk, sk, dj, method = 'fssi-linear', theta_init = None,
+                               tol = 1.48e-08, maxiter = 1000, ngrid = 50):
 
     def inv_func(x, b, std, wk, sk, dj):
         return shrinkage_operator(x, std, wk, sk, dj, jac = False) - b
@@ -120,7 +160,15 @@ def shrinkage_operator_inverse(b, std, wk, sk, dj, method = 'hybr', theta_init =
         theta_init = np.zeros_like(b)
     if method == 'newton-raphson':
         Minv = Minverse_newton_raphson(b, std, wk, sk, dj, tol, maxiter, theta_init)
-    else:
+    elif method == 'fssi-linear':
+        x = Minverse_fssi(b, std, wk, sk, dj, ngrid = ngrid)
+        Minv = MinvInfo(x = x, xpath = None, objpath = None, niter = ngrid,
+                        success = True, message = 'Non iterative method', is_diverging = False)
+    elif method == 'fssi-cubic':
+        x = Minverse_fssi(b, std, wk, sk, dj, ngrid = ngrid, interpolate = 'cubic')
+        Minv = MinvInfo(x = x, xpath = None, objpath = None, niter = ngrid,
+                        success = True, message = 'Non iterative method', is_diverging = False)
+    elif method == 'hybr':
         opt = sp_optimize.root(inv_func, theta_init,
                                args = (b, std, wk, sk, dj),
                                method = method, jac = None, tol = tol)

@@ -348,7 +348,7 @@ def plot_data_from_bspline(axlist, x, y, knots, degree, G, Gb, H, Hb,
     for i,b in enumerate(Hb):
         if b != 0:
             ax2.plot(x, b * H[:, i], label = f"{i+1}")
-    if show_base_legend: axs.legend(title = "Base index")
+    if show_base_legend: ax2.legend(title = "Base index")
     
     
     ax3.scatter(x, y, s = 5, edgecolor = 'black', facecolor='white')
