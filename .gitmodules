@@ -4,6 +4,3 @@
 [submodule "notebooks/mr_ash_demo_pcarbo/mr-ash"]
 	path = notebooks/mr_ash_demo_pcarbo/mr-ash
 	url = git@github.com:pcarbo/mr-ash.git
-[submodule "gradvi-experiments"]
-	path = gradvi-experiments
-	url = git@github.com:banskt/gradvi-experiments.git
