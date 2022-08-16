@@ -1,6 +1,9 @@
 # Vim swaps
 *.swp
 
+# some data files
+notebooks/simulation_setup/trial
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
